@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/main.css" />
+</head>
+<body>
+<noscript>
+    <h2>Twoja przeglądarka nie wspiera JavaScript</h2>
+</noscript>
+
+<div id="container">
+    <div id="header">
+        <div id="logo">ChatPro</div>
+        <div id="status">
+            Twój nick: <span id="username"></span>
+            <div id="status-text">Status serwera: <span id="server-status">OFF</span></div>
+        </div>
+    </div>
+    <div id="main">
+        <div id="adsL">Ads</div>
+        <div id="chat-container">
+            <!--<div class="connecting">
+                Connecting...
+            </div>-->
+            <ul id="chat">
+                <!-- Tutaj będą wyświetlane wiadomości w czasie rzeczywistym -->
+            </ul>
+            <div id="input-container">
+                <input type="text" id="message-input" placeholder="Wpisz wiadomość..." onkeyup="handleEnter(event)">
+                <button id="send-button">Wyślij</button>
+                <button id="connect-button">Połącz</button>
+            </div>
+        </div>
+        <div id="adsR">Ads</div>
+    </div>
+    <div id="footer">Footer</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script src="/js/main.js"></script>
+</body>
+</html>
