@@ -1,28 +1,32 @@
 package io.github.tomaszpro99.chatpro.controller;
 
-import io.github.tomaszpro99.chatpro.model.ChatMessage;
+import io.github.tomaszpro99.chatpro.model.MessageModel;
+import io.github.tomaszpro99.chatpro.model.RoomModel;
+import io.github.tomaszpro99.chatpro.repository.RoomRepository;
+import jakarta.validation.Valid;
+import org.springframework.data.rest.webmvc.RepositoryRestController;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
-import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
-import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
 
-@Controller
+import java.util.Optional;
+
+@RepositoryRestController
 public class ChatController {
-
+    private static final Logger logger = LoggerFactory.getLogger(ChatController.class);
+    private final RoomRepository repository;
+    ChatController(final RoomRepository repository) {
+        this.repository = repository;
+    }
     @MessageMapping("/chat.sendMessage")
-    @SendTo("/topic/public")
-    public ChatMessage sendMessage(@Payload ChatMessage chatMessage) {
+    @SendTo("/topic/room/{id}")
+    public MessageModel sendMessage(@PathVariable int id, @Payload MessageModel chatMessage) {
+        // TODO: wiadomosc bedzie dostarczona do pokoju w ktorym jest uzytkownik, klient ma wysylac wiadomośc, swoj nick, id pokoju
         return chatMessage;
     }
-
-    @MessageMapping("/chat.addUser")
-    @SendTo("/topic/public")
-    public ChatMessage addUser(@Payload ChatMessage chatMessage,
-                               SimpMessageHeaderAccessor headerAccessor) {
-        // Add username in web socket session
-        headerAccessor.getSessionAttributes().put("username", chatMessage.getSender());
-        return chatMessage;
-    }
-
 }
+

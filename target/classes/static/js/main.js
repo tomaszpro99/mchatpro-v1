@@ -5,104 +5,99 @@ var messageInput = document.querySelector('#message-input');
 var sendButton = document.querySelector('#send-button');
 var connectButton = document.querySelector('#connect-button');
 var usernameElement = document.querySelector('#username');
+var roomIDElement = document.querySelector('#ID');
 var serverStatusElement = document.querySelector('#server-status');
 var connectingElement = document.querySelector('.connecting');
 
 var stompClient = null;
 var username = null;
+var ID;
 var connected = false;
+var socket;
 
 var colors = [
     '#2196F3', '#32c787', '#00BCD4', '#ff5652',
     '#ffc107', '#ff85af', '#FF9800', '#39bbb0'
 ];
 
-function connectToChat() {
-    if (!connected) { // Sprawdź, czy użytkownik nie jest już połączony
+function connect() {
+    if (!connected) {
         username = usernameElement.textContent;
         if (username) {
-            var socket = new SockJS('/ws');
-            stompClient = Stomp.over(socket);
-
-            stompClient.connect({}, onConnected, onError);
             connected = true;
+
+            socket = new SockJS('/ws');
+
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, connectChat, onError);
             connectButton.textContent = 'Rozłącz';
             serverStatusElement.textContent = 'ON';
         }
     } else {
-        disconnectFromChat(); // Jeśli jesteś połączony, rozłącz się
+        disconnectChat();
     }
 }
+function connectChat() {
 
-// Funkcja do rozłączania z czatem
-function disconnectFromChat() {
-    if (stompClient !== null) {
-        stompClient.disconnect();
-    }
+    // Zmien subskrypcję na pokoj do chatu
+    var roomTopic = '/topic/room/' + ID;
+    stompClient.subscribe(roomTopic, onMessageReceived,
+        {},
+        JSON.stringify({id: ID, sender: username, type: 'JOIN' }));
+    //connectingElement.classList.add('hidden');
+}
+function disconnectChat() {
     connected = false;
     connectButton.textContent = 'Połącz';
     serverStatusElement.textContent = 'OFF';
+    roomIDElement.textContent = 'Brak';
+    stompClient.ws._transport.url = stompClient.ws._transport.url + "?roomId=" + roomId;
+    socket.close();
 }
-
-// Obsługa przycisku "Połącz/Rozłącz"
-connectButton.addEventListener('click', connectToChat);
-
-function onConnected() {
-    // Subscribe to the Public Topic
-    stompClient.subscribe('/topic/public', onMessageReceived);
-
-    // Tell your username to the server
-    stompClient.send("/app/chat.addUser",
-        {},
-        JSON.stringify({ sender: username, type: 'JOIN' })
-    );
-    connectingElement.classList.add('hidden');
-}
-
-function onError(error) {
-    connectingElement.textContent = 'Could not connect to WebSocket server. Please refresh this page to try again!';
-    connectingElement.style.color = 'red';
-    serverStatusElement.textContent = 'OFF'; // Aktualizacja statusu serwera
-}
-
-function sendMessage() {
-    var messageContent = messageInput.value.trim();
-
-    if (messageContent && stompClient) {
-        var chatMessage = {
-            sender: username,
-            content: messageInput.value,
-            type: 'CHAT'
-        };
-
-        stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
-        messageInput.value = '';
-    }
-}
-
 function onMessageReceived(payload) {
     var message = JSON.parse(payload.body);
 
     var messageElement = document.createElement('li');
 
     if (message.type === 'JOIN') {
-        messageElement.classList.add('event-message');
-        messageElement.textContent = message.sender + ' joined!';
+
+        // Aktualizuj status pokoju w interfejsie
+        roomIDElement.textContent = message.ID;
+
+        messageElement.textContent = 'Wyszukiwanie uzytkownika...';
     } else if (message.type === 'LEAVE') {
-        messageElement.classList.add('event-message');
-        messageElement.textContent = message.sender + ' left!';
+
+        messageElement.textContent = message.sender + ' opuścił pokój.';
+
     } else {
         messageElement.textContent = message.sender + ': ' + message.content;
-        messageElement.classList.add('chat-message'); // Dodaj klasę CSS do wiadomości
-        messageElement.style.color = getAvatarColor(message.sender); // Ustaw kolor całego nicku
+        messageElement.classList.add('chat-message');
+        messageElement.style.color = getAvatarColor(message.sender);
     }
 
     chatContainer.appendChild(messageElement);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
+function sendMessage() {
+    var messageContent = messageInput.value.trim();
 
-
-// Funkcja do generowania koloru avatara
+    if (messageContent && stompClient) {
+        var chatMessage = {
+            ID: ID,
+            type: 'CHAT',
+            sender: username,
+            content: messageInput.value
+        };
+        stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
+        messageInput.value = '';
+    }
+}
+function onError(error) {
+    connectingElement.textContent = 'Error';
+    connectingElement.style.color = 'red';
+    serverStatusElement.textContent = 'OFF';
+}
+// avatar
 function getAvatarColor(messageSender) {
     var hash = 0;
     for (var i = 0; i < messageSender.length; i++) {
@@ -112,8 +107,7 @@ function getAvatarColor(messageSender) {
     var index = Math.abs(hash % colors.length);
     return colors[index];
 }
-
-// Funkcje do obsługi ciasteczek
+// cookie
 function setCookie(name, value, days) {
     const date = new Date();
     date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
@@ -133,27 +127,25 @@ function getCookie(name) {
     return null;
 }
 
-// Sprawdź, czy istnieje już ciasteczko z nazwą użytkownika
 const savedUsername = getCookie("username");
 if (savedUsername) {
     usernameElement.textContent = savedUsername;
 } else {
-    // Jeśli nie istnieje, poproś użytkownika o podanie nicku
-    username = prompt("Podaj swój nick:");
+    username = prompt("Podając nick akcpetujesz cookie. Podaj swój nick:");
     if (username) {
         usernameElement.textContent = username;
-        setCookie("username", username, 1); // Zapisz nick w ciasteczku na 24 godziny.
-    }
-}
-// Obsługa klawisza Enter
-function handleEnter(event) {
-    if (event.keyCode === 13) {
-        sendMessage();
+        setCookie("username", username, 1);
     }
 }
 
 // Nasłuchuj przycisku "Wyślij"
 sendButton.addEventListener('click', sendMessage);
-
+// Obsługa przycisku "Połącz/Rozłącz"
+connectButton.addEventListener('click', connect);
 // Obsługa klawisza Enter
-//messageInput.addEventListener('keyup', handleEnter);
+messageInput.addEventListener('keyup', handleEnter);
+function handleEnter(event) {
+    if (event.keyCode === 13) {
+        sendMessage();
+    }
+}
