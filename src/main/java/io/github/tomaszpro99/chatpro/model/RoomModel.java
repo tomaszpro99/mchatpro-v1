@@ -1,12 +1,10 @@
 package io.github.tomaszpro99.chatpro.model;
-
 import jakarta.persistence.*;
-
-@Entity //bedzie tabela odpowiadajaca klasie
-@Table(name = "rooms")
+@Entity
+@Table(name = "room")
 public class RoomModel {
-    @Id //oznaczamy id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)//IDENTITY //adnotacja do id - strategia generowania, id bedzie kazdorazowo powstawal, sekwencyjne nadawanie id, honorwanie
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
     private String user1;
     private String user2;

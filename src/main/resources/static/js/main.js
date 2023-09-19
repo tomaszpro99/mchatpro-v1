@@ -1,5 +1,4 @@
 'use strict';
-
 var chatContainer = document.querySelector('#chat');
 var messageInput = document.querySelector('#message-input');
 var sendButton = document.querySelector('#send-button');
@@ -7,68 +6,81 @@ var connectButton = document.querySelector('#connect-button');
 var usernameElement = document.querySelector('#username');
 var roomIDElement = document.querySelector('#ID');
 var serverStatusElement = document.querySelector('#server-status');
-var connectingElement = document.querySelector('.connecting');
 
 var stompClient = null;
-var username = null;
+var username;
 var ID;
+var socket = null;
 var connected = false;
-var socket;
+
 
 var colors = [
     '#2196F3', '#32c787', '#00BCD4', '#ff5652',
     '#ffc107', '#ff85af', '#FF9800', '#39bbb0'
 ];
-
+// Obsługa wiadomości otrzymanej z serwera
 function connect() {
     if (!connected) {
         username = usernameElement.textContent;
         if (username) {
             connected = true;
 
+            // Połącz z WebSocket
             socket = new SockJS('/ws');
-
             stompClient = Stomp.over(socket);
             stompClient.connect({}, connectChat, onError);
+
             connectButton.textContent = 'Rozłącz';
             serverStatusElement.textContent = 'ON';
         }
-    } else {
-        disconnectChat();
-    }
+    } else { disconnectChat(); }
 }
 function connectChat() {
+    stompClient.send("/app/room.start", {}, JSON.stringify({
+        sender: username,
+        type: 'START'
+    }));
+    console.log('room.start');
+    stompClient.subscribe('/topic', function (payload) {
+        var message = JSON.parse(payload.body);
 
-    // Zmien subskrypcję na pokoj do chatu
-    var roomTopic = '/topic/room/' + ID;
-    stompClient.subscribe(roomTopic, onMessageReceived,
-        {},
-        JSON.stringify({id: ID, sender: username, type: 'JOIN' }));
-    //connectingElement.classList.add('hidden');
+        if (message.type === 'START') {
+            // Aktualizuj status pokoju w interfejsie
+            roomIDElement.textContent = message.id;
+            console.log('ID pokoju:', message.id);
+            ID = message.id;
+        } else {
+            // Obsłuż inne typy wiadomości
+        }
+    });
+}
+function subscribeRoom() {
+    if (stompClient && ID) {
+        var roomTopic = `/topic/room/${ID}`;
+        stompClient.subscribe(roomTopic, function (payload) {
+            var message = JSON.parse(payload.body);
+            onMessageReceived(message);
+        });
+    }
 }
 function disconnectChat() {
     connected = false;
     connectButton.textContent = 'Połącz';
     serverStatusElement.textContent = 'OFF';
     roomIDElement.textContent = 'Brak';
-    stompClient.ws._transport.url = stompClient.ws._transport.url + "?roomId=" + roomId;
-    socket.close();
+    stompClient.send("/app/room.stop", {},
+        JSON.stringify({id: ID,  type: 'STOP'}));
+    //socket.close();
 }
 function onMessageReceived(payload) {
     var message = JSON.parse(payload.body);
-
     var messageElement = document.createElement('li');
-
-    if (message.type === 'JOIN') {
-
+    if (message.type === 'START') {
         // Aktualizuj status pokoju w interfejsie
         roomIDElement.textContent = message.ID;
-
         messageElement.textContent = 'Wyszukiwanie uzytkownika...';
-    } else if (message.type === 'LEAVE') {
-
+    } else if (message.type === 'STOP') {
         messageElement.textContent = message.sender + ' opuścił pokój.';
-
     } else {
         messageElement.textContent = message.sender + ': ' + message.content;
         messageElement.classList.add('chat-message');
@@ -83,12 +95,12 @@ function sendMessage() {
 
     if (messageContent && stompClient) {
         var chatMessage = {
-            ID: ID,
+            id: ID,
             type: 'CHAT',
             sender: username,
             content: messageInput.value
         };
-        stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
+        stompClient.send("/app/chat.message", {}, JSON.stringify(chatMessage));
         messageInput.value = '';
     }
 }
@@ -103,7 +115,6 @@ function getAvatarColor(messageSender) {
     for (var i = 0; i < messageSender.length; i++) {
         hash = 31 * hash + messageSender.charCodeAt(i);
     }
-
     var index = Math.abs(hash % colors.length);
     return colors[index];
 }
@@ -114,7 +125,6 @@ function setCookie(name, value, days) {
     const expires = "expires=" + date.toUTCString();
     document.cookie = name + "=" + value + ";" + expires + ";path=/";
 }
-
 function getCookie(name) {
     const decodedCookie = decodeURIComponent(document.cookie);
     const cookies = decodedCookie.split(';');
@@ -123,10 +133,8 @@ function getCookie(name) {
         if (cookie.startsWith(name + "=")) {
             return cookie.substring(name.length + 1);
         }
-    }
-    return null;
+    } return null;
 }
-
 const savedUsername = getCookie("username");
 if (savedUsername) {
     usernameElement.textContent = savedUsername;
@@ -144,8 +152,4 @@ sendButton.addEventListener('click', sendMessage);
 connectButton.addEventListener('click', connect);
 // Obsługa klawisza Enter
 messageInput.addEventListener('keyup', handleEnter);
-function handleEnter(event) {
-    if (event.keyCode === 13) {
-        sendMessage();
-    }
-}
+function handleEnter(event) { if (event.keyCode === 13) { sendMessage();} }
