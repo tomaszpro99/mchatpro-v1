@@ -31,7 +31,7 @@ function connect() {
             stompClient.connect({}, connectChat, onError);
 
             connectButton.textContent = 'Rozłącz';
-            serverStatusElement.textContent = 'ON';
+            serverStatusElement.textContent = 'Connect';
         }
     } else { disconnectChat(); }
 }
@@ -40,47 +40,40 @@ function connectChat() {
         sender: username,
         type: 'START'
     }));
-    console.log('room.start');
     stompClient.subscribe('/topic', function (payload) {
         var message = JSON.parse(payload.body);
-
         if (message.type === 'START') {
-            // Aktualizuj status pokoju w interfejsie
+            // Aktualizacja odebranego ID
             roomIDElement.textContent = message.id;
             console.log('ID pokoju:', message.id);
             ID = message.id;
-        } else {
-            // Obsłuż inne typy wiadomości
+            subscribeRoom();
         }
     });
 }
 function subscribeRoom() {
     if (stompClient && ID) {
         var roomTopic = `/topic/room/${ID}`;
-        stompClient.subscribe(roomTopic, function (payload) {
-            var message = JSON.parse(payload.body);
-            onMessageReceived(message);
-        });
+        stompClient.subscribe(roomTopic, onMessageReceived);
     }
 }
 function disconnectChat() {
     connected = false;
     connectButton.textContent = 'Połącz';
-    serverStatusElement.textContent = 'OFF';
-    roomIDElement.textContent = 'Brak';
-    stompClient.send("/app/room.stop", {},
-        JSON.stringify({id: ID,  type: 'STOP'}));
-    //socket.close();
+    serverStatusElement.textContent = 'Disconnect';
+    roomIDElement.textContent = '0';
+    stompClient.send("/app/room.stop", {}, JSON.stringify({id: ID,  type: 'STOP'}));
+    ID = null;
 }
 function onMessageReceived(payload) {
     var message = JSON.parse(payload.body);
     var messageElement = document.createElement('li');
     if (message.type === 'START') {
         // Aktualizuj status pokoju w interfejsie
-        roomIDElement.textContent = message.ID;
-        messageElement.textContent = 'Wyszukiwanie uzytkownika...';
+        //roomIDElement.textContent = message.id;
+        //messageElement.textContent = 'Wyszukiwanie uzytkownika...';
     } else if (message.type === 'STOP') {
-        messageElement.textContent = message.sender + ' opuścił pokój.';
+        //messageElement.textContent = message.sender + ' opuścił pokój.';
     } else {
         messageElement.textContent = message.sender + ': ' + message.content;
         messageElement.classList.add('chat-message');
@@ -100,13 +93,11 @@ function sendMessage() {
             sender: username,
             content: messageInput.value
         };
-        stompClient.send("/app/chat.message", {}, JSON.stringify(chatMessage));
+        stompClient.send(`/app/chat.message/${ID}`, {}, JSON.stringify(chatMessage));
         messageInput.value = '';
     }
 }
 function onError(error) {
-    connectingElement.textContent = 'Error';
-    connectingElement.style.color = 'red';
     serverStatusElement.textContent = 'OFF';
 }
 // avatar

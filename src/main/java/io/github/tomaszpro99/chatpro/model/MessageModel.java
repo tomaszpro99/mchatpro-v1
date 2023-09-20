@@ -3,8 +3,8 @@ package io.github.tomaszpro99.chatpro.model;
 public class MessageModel {
     private int id;
     private MessageType type;
-    private String content;
     private String sender;
+    private String content;
     public enum MessageType { CHAT, START, STOP}
     public int getId() { return id; }
     public void setId(final int id) { this.id = id; }
