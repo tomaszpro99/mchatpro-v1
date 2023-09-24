@@ -4,12 +4,12 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>io.github.tomasz.pro</groupId>
-	<artifactId>chat-pro</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<artifactId>mchatpro</artifactId>
+	<version>v1.0</version>
 	<packaging>jar</packaging>
 
-	<name>ChatPro</name>
-	<description>ChatPro</description>
+	<name>mchatpro</name>
+	<description>mchatpro</description>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -51,12 +51,6 @@
 		</dependency>
 
 		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-
-		<dependency>
 			<groupId>org.springframework.data</groupId>
 			<artifactId>spring-data-rest-webmvc</artifactId>
 			<version>4.0.5</version>
@@ -82,6 +76,10 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.session</groupId>
+			<artifactId>spring-session-core</artifactId>
 		</dependency>
 	</dependencies>
 

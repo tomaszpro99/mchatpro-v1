@@ -5,7 +5,8 @@ public class MessageModel {
     private MessageType type;
     private String sender;
     private String content;
-    public enum MessageType { CHAT, START, STOP}
+    private String session;
+    public enum MessageType { CHAT, START, STOP, CREATE, JOIN }
     public int getId() { return id; }
     public void setId(final int id) { this.id = id; }
     public MessageType getType() {
@@ -26,4 +27,8 @@ public class MessageModel {
     public void setSender(String sender) {
         this.sender = sender;
     }
+    public String getSession() {
+        return session;
+    }
+    public void setSession(String session) { this.session = session; }
 }

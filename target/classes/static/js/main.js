@@ -5,81 +5,82 @@ var sendButton = document.querySelector('#send-button');
 var connectButton = document.querySelector('#connect-button');
 var usernameElement = document.querySelector('#username');
 var roomIDElement = document.querySelector('#ID');
-var serverStatusElement = document.querySelector('#server-status');
-
-var stompClient = null;
+var stompClient;
+var subscription;
 var username;
 var ID;
 var socket = null;
 var connected = false;
 
-
-var colors = [
-    '#2196F3', '#32c787', '#00BCD4', '#ff5652',
-    '#ffc107', '#ff85af', '#FF9800', '#39bbb0'
-];
-// Obsługa wiadomości otrzymanej z serwera
 function connect() {
     if (!connected) {
         username = usernameElement.textContent;
         if (username) {
             connected = true;
-
-            // Połącz z WebSocket
-            socket = new SockJS('/ws');
-            stompClient = Stomp.over(socket);
-            stompClient.connect({}, connectChat, onError);
-
+            if (!socket) {
+                socket = new SockJS('/ws');
+                stompClient = Stomp.over(socket);
+                stompClient.connect({}, connectChat, onError);
+            } else {connectChat();}
             connectButton.textContent = 'Rozłącz';
-            serverStatusElement.textContent = 'Connect';
+            chatContainer.innerHTML = '';
+            onError("Limited Test Build v1.0 [Public Release]");
+            onError("========================================");
         }
     } else { disconnectChat(); }
 }
 function connectChat() {
-    stompClient.send("/app/room.start", {}, JSON.stringify({
-        sender: username,
-        type: 'START'
-    }));
-    stompClient.subscribe('/topic', function (payload) {
+    stompClient.send("/app/room.start", {}, JSON.stringify({ sender: username }));
+    subscription = stompClient.subscribe('/topic', function (payload) {
         var message = JSON.parse(payload.body);
-        if (message.type === 'START') {
-            // Aktualizacja odebranego ID
-            roomIDElement.textContent = message.id;
-            console.log('ID pokoju:', message.id);
-            ID = message.id;
-            subscribeRoom();
+        {
+            if(message.sender === username) {
+                roomIDElement.textContent = message.id;
+                console.log('ID:', message.id);
+                console.log('Type:', message.type);
+                console.log('sender:', message.sender);
+                console.log('session:', message.session);
+                ID = message.id;
+                if (subscription) { subscription.unsubscribe(); }
+                subscribeRoom();
+                if (message.type === 'JOIN') { onInfo("Dołączono do pokoju: " + ID); onHello(); }
+                if (message.type === 'CREATE') { onInfo("Stworzono pokój: " + ID + ", oczekiwanie na użytkownika..."); }
+            } else { onError("Połącz ponownie"); disconnectChat(); }
         }
     });
 }
 function subscribeRoom() {
     if (stompClient && ID) {
         var roomTopic = `/topic/room/${ID}`;
-        stompClient.subscribe(roomTopic, onMessageReceived);
+        subscription = stompClient.subscribe(roomTopic, onMessageReceived);
     }
+    messageInput.disabled = false;
+    sendButton.disabled = false;
+    messageInput.placeholder = 'Wiadomość...';
 }
 function disconnectChat() {
     connected = false;
     connectButton.textContent = 'Połącz';
-    serverStatusElement.textContent = 'Disconnect';
-    roomIDElement.textContent = '0';
-    stompClient.send("/app/room.stop", {}, JSON.stringify({id: ID,  type: 'STOP'}));
+    messageInput.disabled = true;
+    sendButton.disabled = true;
+    messageInput.placeholder = 'Połącz się, aby rozpocząć nowy chat!';
+    stompClient.send("/app/room.stop", {}, JSON.stringify({id: ID}));
     ID = null;
+    onInfo("Rozłączono.");
+    subscription = null;
 }
 function onMessageReceived(payload) {
     var message = JSON.parse(payload.body);
     var messageElement = document.createElement('li');
-    if (message.type === 'START') {
-        // Aktualizuj status pokoju w interfejsie
-        //roomIDElement.textContent = message.id;
-        //messageElement.textContent = 'Wyszukiwanie uzytkownika...';
-    } else if (message.type === 'STOP') {
-        //messageElement.textContent = message.sender + ' opuścił pokój.';
-    } else {
+    if (message.type === 'CHAT') {
         messageElement.textContent = message.sender + ': ' + message.content;
         messageElement.classList.add('chat-message');
-        messageElement.style.color = getAvatarColor(message.sender);
+        messageElement.style.color = randomColor(message.sender);
     }
-
+    if (message.type === 'JOIN') {
+        messageElement.textContent = message.sender + message.content;
+        messageElement.classList.add('info-message');
+    }
     chatContainer.appendChild(messageElement);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
@@ -87,29 +88,43 @@ function sendMessage() {
     var messageContent = messageInput.value.trim();
 
     if (messageContent && stompClient) {
-        var chatMessage = {
-            id: ID,
-            type: 'CHAT',
-            sender: username,
-            content: messageInput.value
-        };
+        var chatMessage = { id: ID, type: 'CHAT', sender: username, content: messageInput.value };
         stompClient.send(`/app/chat.message/${ID}`, {}, JSON.stringify(chatMessage));
         messageInput.value = '';
     }
 }
-function onError(error) {
-    serverStatusElement.textContent = 'OFF';
-}
-// avatar
-function getAvatarColor(messageSender) {
-    var hash = 0;
-    for (var i = 0; i < messageSender.length; i++) {
-        hash = 31 * hash + messageSender.charCodeAt(i);
+function onHello() {
+    if (stompClient) {
+        var chatMessage = { id: ID,  type: 'JOIN',  sender: username, content: " dołącza do chatu." };
+        stompClient.send(`/app/chat.message/${ID}`, {}, JSON.stringify(chatMessage));
     }
-    var index = Math.abs(hash % colors.length);
-    return colors[index];
 }
-// cookie
+function onError(error) {
+    var messageElement = document.createElement('li');
+    messageElement.textContent = error;
+    messageElement.classList.add('error-message');
+    chatContainer.appendChild(messageElement);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    //disconnectChat();
+}
+function onInfo(info) {
+    var messageElement = document.createElement('li');
+    messageElement.textContent = info;
+    messageElement.classList.add('info-message');
+    chatContainer.appendChild(messageElement);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+function randomColor(messageSender) {
+    const colors = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'brown', 'turquoise', 'gray'];
+    const hash = messageSender.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
+}
+
+// cookie & username
+function isValidUsername(username) {
+    const usernameRegex = /^[a-zA-Z0-9]{1,13}$/;
+    return usernameRegex.test(username);
+}
 function setCookie(name, value, days) {
     const date = new Date();
     date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
@@ -124,23 +139,23 @@ function getCookie(name) {
         if (cookie.startsWith(name + "=")) {
             return cookie.substring(name.length + 1);
         }
-    } return null;
+    }
+    return null;
 }
-const savedUsername = getCookie("username");
+const savedUsername = getCookie('username');
 if (savedUsername) {
     usernameElement.textContent = savedUsername;
 } else {
-    username = prompt("Podając nick akcpetujesz cookie. Podaj swój nick:");
+    let username;
+    do {
+        username = prompt('Podając nick akceptujesz regulamin, oraz politykę cookie.\n[Maksymalnie 13 znaków, tylko litery i cyfry]\nTwój nick:');
+    } while (username && !isValidUsername(username));
     if (username) {
         usernameElement.textContent = username;
-        setCookie("username", username, 1);
+        setCookie('username', username, 1);
     }
 }
-
-// Nasłuchuj przycisku "Wyślij"
 sendButton.addEventListener('click', sendMessage);
-// Obsługa przycisku "Połącz/Rozłącz"
 connectButton.addEventListener('click', connect);
-// Obsługa klawisza Enter
 messageInput.addEventListener('keyup', handleEnter);
 function handleEnter(event) { if (event.keyCode === 13) { sendMessage();} }
