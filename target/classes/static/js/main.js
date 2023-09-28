@@ -4,13 +4,17 @@ var messageInput = document.querySelector('#message-input');
 var sendButton = document.querySelector('#send-button');
 var connectButton = document.querySelector('#connect-button');
 var usernameElement = document.querySelector('#username');
-var roomIDElement = document.querySelector('#ID');
+var RIDElement = document.querySelector('#RID');
 var stompClient;
 var subscription;
-var username;
-var ID;
+var RID;
 var socket = null;
 var connected = false;
+let UID = null;
+let username = null;
+var connectButtonDisabled = false;
+var disconnectButtonDisabled = true;
+var reconnectTimeout = null;
 
 function connect() {
     if (!connected) {
@@ -21,53 +25,61 @@ function connect() {
                 socket = new SockJS('/ws');
                 stompClient = Stomp.over(socket);
                 stompClient.connect({}, connectChat, onError);
-            } else {connectChat();}
-            connectButton.textContent = 'Rozłącz';
+            } else { connectChat();}
+            if (!connectButtonDisabled) {
+                connectButton.disabled = true;
+                setTimeout(function() {
+                    connectButton.disabled = false;
+                    connectButton.textContent = 'Rozłącz';
+                }, 15000);
+            }
+            connectButton.textContent = '15sek';
             chatContainer.innerHTML = '';
             onError("Limited Test Build v1.0 [Public Release]");
             onError("========================================");
         }
-    } else { disconnectChat(); }
+    } else { onElo(); disconnectChat(); onInfo("Rozłączono."); }
 }
 function connectChat() {
-    stompClient.send("/app/room.start", {}, JSON.stringify({ sender: username }));
-    subscription = stompClient.subscribe('/topic', function (payload) {
-        var message = JSON.parse(payload.body);
-        {
-            if(message.sender === username) {
-                roomIDElement.textContent = message.id;
-                console.log('ID:', message.id);
-                console.log('Type:', message.type);
-                console.log('sender:', message.sender);
-                console.log('session:', message.session);
-                ID = message.id;
+    if (stompClient && UID) {
+        var link = `/app/search/${UID}`
+        stompClient.send(link, {}, JSON.stringify({uid: UID}));
+        var roomTopic = `/topic/session/${UID}`;
+        subscription = stompClient.subscribe(roomTopic, function (payload) {
+            var message = JSON.parse(payload.body);
+            if (message.uid === UID) {
+                RID = message.rid;
+                RIDElement.textContent = RID;
+                if (message.type === 'JOIN') { onInfo("Dołączono do pokoju: " + RID); onHello(); }
+                if (message.type === 'CREATE') { onInfo("Stworzono pokój: " + RID + ", oczekiwanie na użytkownika..."); }
                 if (subscription) { subscription.unsubscribe(); }
                 subscribeRoom();
-                if (message.type === 'JOIN') { onInfo("Dołączono do pokoju: " + ID); onHello(); }
-                if (message.type === 'CREATE') { onInfo("Stworzono pokój: " + ID + ", oczekiwanie na użytkownika..."); }
-            } else { onError("Połącz ponownie"); disconnectChat(); }
-        }
-    });
+            }
+        });
+    }
 }
 function subscribeRoom() {
-    if (stompClient && ID) {
-        var roomTopic = `/topic/room/${ID}`;
+    if (stompClient && RID) {
+        var roomTopic = `/topic/room/${RID}`;
         subscription = stompClient.subscribe(roomTopic, onMessageReceived);
+
     }
-    messageInput.disabled = false;
-    sendButton.disabled = false;
-    messageInput.placeholder = 'Wiadomość...';
 }
 function disconnectChat() {
     connected = false;
-    connectButton.textContent = 'Połącz';
     messageInput.disabled = true;
     sendButton.disabled = true;
+    connectButton.textContent = '10sek';
+    connectButton.disabled = true;
+    setTimeout(function() {
+        connectButton.disabled = false;
+        connectButton.textContent = 'Połącz';
+        }, 10000);
     messageInput.placeholder = 'Połącz się, aby rozpocząć nowy chat!';
-    stompClient.send("/app/room.stop", {}, JSON.stringify({id: ID}));
-    ID = null;
-    onInfo("Rozłączono.");
-    subscription = null;
+    if (subscription) { subscription.unsubscribe(); }
+    stompClient.send("/app/disconnect", {}, JSON.stringify({rid: RID}));
+    RID = null;
+    //location.reload();
 }
 function onMessageReceived(payload) {
     var message = JSON.parse(payload.body);
@@ -80,23 +92,38 @@ function onMessageReceived(payload) {
     if (message.type === 'JOIN') {
         messageElement.textContent = message.sender + message.content;
         messageElement.classList.add('info-message');
+        messageInput.disabled = false;
+        sendButton.disabled = false;
+        messageInput.placeholder = 'Wiadomość...';
+    }
+    if (message.type === 'LEAVE') {
+        messageElement.textContent = message.sender + message.content;
+        messageElement.classList.add('info-message');
+        disconnectChat();
+        messageInput.disabled = true;
+        sendButton.disabled = true;
     }
     chatContainer.appendChild(messageElement);
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 function sendMessage() {
     var messageContent = messageInput.value.trim();
-
     if (messageContent && stompClient) {
-        var chatMessage = { id: ID, type: 'CHAT', sender: username, content: messageInput.value };
-        stompClient.send(`/app/chat.message/${ID}`, {}, JSON.stringify(chatMessage));
+        var chatMessage = { id: RID, type: 'CHAT', sender: username, content: messageInput.value };
+        stompClient.send(`/app/chat.message/${RID}`, {}, JSON.stringify(chatMessage));
         messageInput.value = '';
     }
 }
 function onHello() {
     if (stompClient) {
-        var chatMessage = { id: ID,  type: 'JOIN',  sender: username, content: " dołącza do chatu." };
-        stompClient.send(`/app/chat.message/${ID}`, {}, JSON.stringify(chatMessage));
+        var chatMessage = { id: RID, type: 'JOIN',  sender: username, content: " dołącza do chatu." };
+        stompClient.send(`/app/chat.message/${RID}`, {}, JSON.stringify(chatMessage));
+    }
+}
+function onElo() {
+    if (stompClient) {
+        var chatMessage = { id: RID, type: 'LEAVE',  sender: username, content: " wychodzi z chatu." };
+        stompClient.send(`/app/chat.message/${RID}`, {}, JSON.stringify(chatMessage));
     }
 }
 function onError(error) {
@@ -115,11 +142,10 @@ function onInfo(info) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 function randomColor(messageSender) {
-    const colors = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'brown', 'turquoise', 'gray'];
+    const colors = ['red', 'green', 'teal', 'olive', 'orange', 'purple', 'pink', 'brown', 'turquoise', 'gray'];
     const hash = messageSender.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[hash % colors.length];
 }
-
 // cookie & username
 function isValidUsername(username) {
     const usernameRegex = /^[a-zA-Z0-9]{1,13}$/;
@@ -142,20 +168,36 @@ function getCookie(name) {
     }
     return null;
 }
+function newUsernumer(username) {
+    const currentSecond = Math.floor(new Date().getTime() / 1000) % 86400;
+    const hash = username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const uniqueNumber = (hash + currentSecond) % 1000;
+    return `${currentSecond}${String(uniqueNumber).padStart(3, '0')}`;
+}
 const savedUsername = getCookie('username');
-if (savedUsername) {
-    usernameElement.textContent = savedUsername;
+const savedUsernumer = getCookie('usernumer');
+
+if (savedUsername && savedUsernumer) {
+    username = savedUsername;
+    UID = savedUsernumer;
+    usernameElement.textContent = username;
+    setCookie('username', username, 1/48);
+    setCookie('usernumer', UID, 1/48);
 } else {
-    let username;
     do {
         username = prompt('Podając nick akceptujesz regulamin, oraz politykę cookie.\n[Maksymalnie 13 znaków, tylko litery i cyfry]\nTwój nick:');
     } while (username && !isValidUsername(username));
     if (username) {
+        UID = newUsernumer(username);
         usernameElement.textContent = username;
-        setCookie('username', username, 1);
+        setCookie('username', username, 1/48);
+        setCookie('usernumer', UID, 1/48);
+        console.log(username + UID);
     }
 }
+
 sendButton.addEventListener('click', sendMessage);
-connectButton.addEventListener('click', connect);
+connectButton.addEventListener('click', connect );
 messageInput.addEventListener('keyup', handleEnter);
 function handleEnter(event) { if (event.keyCode === 13) { sendMessage();} }
+

@@ -6,17 +6,12 @@ public class RoomModel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-    private String user1;
-    private String user2;
-    private boolean full2 = false;
-    private String session1;
-    private String session2;
+    private String UID;
+    private boolean wait = true;
     public RoomModel() {}
     public int getId() { return id; }
-    public String getUser1() { return user1; }
-    public String getUser2() { return user2; }
-    public String getSession1() { return session1; }
-    public String getSession2() { return session2; }
-    public boolean isFull2() { return full2; }
-    public void setFull2(boolean full2) { this.full2 = full2; }
+    public String getUID() { return UID; }
+    public void setUID(String UID) {this.UID = UID;}
+    public boolean getWait() { return wait; }
+    public void setWait(boolean wait) { this.wait = wait; }
 }

@@ -1,14 +1,17 @@
 package io.github.tomaszpro99.chatpro.model;
 
 public class MessageModel {
-    private int id;
+    private int RID;
+    private String UID;
     private MessageType type;
     private String sender;
     private String content;
-    private String session;
-    public enum MessageType { CHAT, START, STOP, CREATE, JOIN }
-    public int getId() { return id; }
-    public void setId(final int id) { this.id = id; }
+    //private String SID;
+    public enum MessageType { CHAT, CREATE, JOIN, LEAVE, STATUS, RECEIPT }
+    public int getRID() { return RID; }
+    public void setRID(final int RID) { this.RID = RID; }
+    public String getUID() { return UID; }
+    public void setUID(String UID) { this.UID = UID; }
     public MessageType getType() {
         return type;
     }
@@ -27,8 +30,6 @@ public class MessageModel {
     public void setSender(String sender) {
         this.sender = sender;
     }
-    public String getSession() {
-        return session;
-    }
-    public void setSession(String session) { this.session = session; }
+    //public String getSID() { return SID; }
+    //public void setSID(String SID) { this.SID = SID; }
 }

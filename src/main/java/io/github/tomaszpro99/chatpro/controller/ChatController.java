@@ -2,7 +2,6 @@ package io.github.tomaszpro99.chatpro.controller;
 
 import io.github.tomaszpro99.chatpro.model.MessageModel;
 import io.github.tomaszpro99.chatpro.repository.RoomRepository;
-import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
@@ -14,58 +13,51 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import org.springframework.web.bind.annotation.GetMapping;
 import java.util.Optional;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 
 @Controller
 public class ChatController {
-    private final SimpMessagingTemplate messagingTemplate;
     private final RoomRepository roomRepository;
     @Autowired
-    public ChatController(RoomRepository roomRepository, SimpMessagingTemplate messagingTemplate) {
+    public ChatController(RoomRepository roomRepository) {
         this.roomRepository = roomRepository;
-        this.messagingTemplate = messagingTemplate;
     }
     private static final Logger logger = LoggerFactory.getLogger(ChatController.class);
+
     @MessageMapping("/chat.message/{id}")
     @SendTo("/topic/room/{id}")
     public MessageModel sendMessage(@Payload MessageModel chatMessage, SimpMessageHeaderAccessor headerAccessor) {
         String session = headerAccessor.getSessionId();
-        logger.info("[Room][Mes][" + session + "][" + chatMessage.getId() + "][" + chatMessage.getContent() + "]");
         return chatMessage;
     }
     @Transactional
-    @MessageMapping("/room.start")
-    @SendTo("/topic")
+    @MessageMapping("/search/{uid}")
+    @SendTo("/topic/session/{uid}")
     public MessageModel start(@Payload MessageModel chatMessage, SimpMessageHeaderAccessor headerAccessor) {
-        String session = headerAccessor.getSessionId();
-        String username = chatMessage.getSender();
-        Optional<Integer> roomIdOptional = roomRepository.findMinRoomIdWithFull2False();
-        int roomId;
+        String UID = chatMessage.getUID();
+        Optional<Integer> roomIdOptional = roomRepository.findMinRoomIdWithWaitTrue();
+        int RID;
         MessageModel responseMessage = new MessageModel();
-        responseMessage.setSender(username);
         if (roomIdOptional.isPresent()) {
-            roomId = roomIdOptional.get();
-            roomRepository.updateRoomWithUser2AndFull2True(roomId, username);
-            logger.info("[Room][Add][" + roomId + "][" + username + "]["+ session +"]");
+            RID = roomIdOptional.get();
+            roomRepository.updateRoomWithWaitFalse(RID);
+            logger.info("[Room][Add][" + RID + "]["+ UID +"]");
             responseMessage.setType(MessageModel.MessageType.JOIN);
         } else {
-            roomRepository.createRoom(username,session);
-            roomId = roomRepository.IDcreateRoom();
-            logger.info("[Room][New][" + roomId + "][" + username + "]["+ session +"]");
+            roomRepository.createRoom(UID);
+            RID = roomRepository.findRoomIdByUID(UID);
+            logger.info("[Room][New][" + RID + "]["+ UID +"]");
             responseMessage.setType(MessageModel.MessageType.CREATE);
         }
-        responseMessage.setId(roomId);
-        responseMessage.setSession(session);
+        responseMessage.setRID(RID);
+        responseMessage.setUID(UID);
         return responseMessage;
     }
-    @MessageMapping("/room.stop")
+    @MessageMapping("/disconnect")
     public MessageModel stop(@Payload MessageModel chatMessage) {
-        int ID = chatMessage.getId();
-        roomRepository.deleteById(ID);
-        logger.info("[Room][Del]["+ID+"]");
+        int RID = chatMessage.getRID();
+        roomRepository.deleteById(RID);
+        logger.info("[Room][Del]["+RID+"]");
         return chatMessage;
     }
     @GetMapping("/regulamin")
