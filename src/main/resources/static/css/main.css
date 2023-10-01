@@ -1,8 +1,6 @@
-html {
+html, body {
     height: 100%;
     font-family: Arial, Helvetica, sans-serif;
-}
-body {
     margin: 0;
     padding: 0;
 }
@@ -13,107 +11,95 @@ h1, h1 a { /* 'logo' */
     color: #ffffff;
     text-shadow: 3px 3px 5px #000000;
     text-decoration: none;
+    margin: 0;
+    padding: 0;
 }
-
 #container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: 100%;
 }
-
-#header {
-    background-color: #333;
-    color: #fff;
-    text-align: left;
+/* HEADER */
+#header, #footer {
+    width: 100%;
     height: 15%;
-    width: 100%;
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-#footer {
     background-color: #333;
     color: #fff;
-    text-align: left;
-    height: 10%;
-    width: 100%;
-    position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
 }
-
-#mheader, #mfooter{
+#footer { height: 10%; }
+#mheader, #mfooter {
     height: 100%;
     width: 60%;
-    position: absolute;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-#footer a {
-    color: #fff;
-    text-decoration: none;
-    padding: 10px 20px;
-}
-
-#footer a:hover {
-    text-decoration: underline;
-}
-#logo {
-    margin-left: 20px;
-    font-size: 1rem;
-}
-
-#status {
-    color: #fff;
-    text-align: left;
-    width: 35%;
-    height: 50%;
-    font-size: 1rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    border: 0.5px solid black;
-}
-
-#status div {
-    width: 100%;
-    height: 33%;
-    align-items: center;
-    padding-left: 2%;
-}
-#donate {
-    height: 95%;
-    width: 40%;
     display: flex;
     flex-direction: row;
-    align-items: center;
-    justify-content: flex-end;
-    float: right;
-    margin-right: 4%;
+    align-items: flex-end;
+}
+#logo {
+    width: auto;
+    margin: 1rem;
+}
+#status {
+    display: flex;
+    flex-direction: row;
+    width: auto;
+    margin: 1rem;
+    margin-left: auto;
+    /*border: 0.5px solid black;*/
+}
+#status div {
+    width: auto;
+    margin: 0;
+    white-space: nowrap; /* niezwijalny */
+    font-size: 1rem;
+    color: #fff;
+    text-align: left;
+}
+/* FOOTER */
+#footer a {
+    width: auto;
+    color: #fff;
+    text-decoration: none;
+    margin: 1rem;
+    white-space: nowrap; /* niezwijalny */
+}
+#footer a:hover { text-decoration: underline; }
+#donate {
+    display: flex;
+    flex-direction: row;
+    align-items: center; /* centrowanie względem osi Y */
+    width: auto;
+    height: 1rem;
+    margin: 1rem;
+    margin-left: auto;
 }
 #donate a {
-    width: 20%;
+    margin: 0;
+    padding: 0;
+}
+#donate div {
+    margin: 0;
+    padding: 0;
 }
 #donate img {
-    width: 6rem;
+    height: 1.4rem;
+    margin-left: 0.5rem; /* odstęp od tekstu */
 }
+/* MAIN */
 #main {
     background-color: #f2f2f2;
     display: flex;
     flex-grow: 1;
     max-height: 75%;
 }
-
 #adsL, #adsR {
     background-color: #ccc;
     width: 20%;
     flex-shrink: 0;
     overflow-y: auto;
 }
-
 #chat-container {
     display: flex;
     flex-direction: column;
@@ -121,7 +107,6 @@ h1, h1 a { /* 'logo' */
     padding: 0 3% 0 3%; /* G P D L */
     flex-grow: 1;
 }
-
 #chat {
     border: 1px solid #333;
     background-color: #fff;
@@ -130,7 +115,6 @@ h1, h1 a { /* 'logo' */
     padding: 10px;
     flex-grow: 1;
 }
-
 #input-container {
     width: 100%;
     display: flex;
@@ -138,12 +122,10 @@ h1, h1 a { /* 'logo' */
     align-items: center;
     padding-bottom: 2%;
 }
-
 #message-input {
     flex-grow: 1;
     padding: 5px;
 }
-
 #send-button, #connect-button {
     background-color: #333;
     color: #fff;
@@ -157,13 +139,60 @@ h1, h1 a { /* 'logo' */
     max-height: 100%;
     padding: 20px;
 }
-.chat-message {
+.chat-message {  }
+.info-message { color: #000000; }
+.error-message { color: #ff0000; text-align: center; }
+/* Wersja mobilna */
+@media (max-width: 768px) {
+    #main {
+        flex-direction: column;
+    }
+    #mheader {
+        width: 100%;
+        flex-direction: column;
+        justify-content: center; /* margin nizej ogarnie w poziomie, a to w pionie */
+    }
+    #logo, #status {
+        margin: 0 auto; /* GD=0 LP=auto "wysrodkowanie" w poziomie */
+    }
+    #mfooter {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+    #mfooter a {
+        margin: 2% 0 0 1.5%;
+    }
+    #donate {
+        flex-direction: column;
+        margin: 5% 10% auto auto;
+    }
+    #donate img {
+        margin: 3% 0 0 0;
+    }
+    #adsL, #adsR {
+        width: 100%;
+        height: 20%;
+        background-color: #ccc;
+        overflow-y: auto;
+    }
+    #adsL { order: 1; }
+    #adsR { order: 3; }
+    #chat-container {
+        order: 2;
+        height: 35%;
+    }
+    #regulamin {
+        order: 2;
+        height: 55%;
+    }
+    #chat {
+        padding: 0 2% 0 2%;
+    }
+}
 
-}
-.info-message {
-    color: #000000;
-}
-.error-message {
-    color: #ff0000;
-    text-align: center;
-}
+
+
+

@@ -13,12 +13,10 @@ var connected = false;
 let UID = null;
 let username = null;
 var connectButtonDisabled = false;
-var disconnectButtonDisabled = true;
-var reconnectTimeout = null;
 
 function connect() {
     if (!connected) {
-        username = usernameElement.textContent;
+        // username = usernameElement.textContent;
         if (username) {
             connected = true;
             if (!socket) {
@@ -31,9 +29,9 @@ function connect() {
                 setTimeout(function() {
                     connectButton.disabled = false;
                     connectButton.textContent = 'Rozłącz';
-                }, 15000);
+                }, 8000);
             }
-            connectButton.textContent = '15sek';
+            connectButton.textContent = '8sek';
             chatContainer.innerHTML = '';
             onError("Limited Test Build v1.0 [Public Release]");
             onError("========================================");
@@ -69,12 +67,12 @@ function disconnectChat() {
     connected = false;
     messageInput.disabled = true;
     sendButton.disabled = true;
-    connectButton.textContent = '10sek';
+    connectButton.textContent = '5sek';
     connectButton.disabled = true;
     setTimeout(function() {
         connectButton.disabled = false;
         connectButton.textContent = 'Połącz';
-        }, 10000);
+        }, 5000);
     messageInput.placeholder = 'Połącz się, aby rozpocząć nowy chat!';
     if (subscription) { subscription.unsubscribe(); }
     stompClient.send("/app/disconnect", {}, JSON.stringify({rid: RID}));
@@ -180,18 +178,18 @@ const savedUsernumer = getCookie('usernumer');
 if (savedUsername && savedUsernumer) {
     username = savedUsername;
     UID = savedUsernumer;
-    usernameElement.textContent = username;
+    usernameElement.textContent = username + "!";
     setCookie('username', username, 1/48);
     setCookie('usernumer', UID, 1/48);
 } else {
     do {
-        username = prompt('Podając nick akceptujesz regulamin, oraz politykę cookie.\n[Maksymalnie 13 znaków, tylko litery i cyfry]\nTwój nick:');
+        username = prompt('Podając nick akceptujesz regulamin, oraz politykę cookie.\nwww.mchat.pro/regulamin\n\nNick:');
     } while (username && !isValidUsername(username));
     if (username) {
         UID = newUsernumer(username);
-        usernameElement.textContent = username;
-        setCookie('username', username, 1/48);
-        setCookie('usernumer', UID, 1/48);
+        usernameElement.textContent = username + "!";
+        setCookie('username', username, 1/288);
+        setCookie('usernumer', UID, 1/288);
         console.log(username + UID);
     }
 }
@@ -200,4 +198,4 @@ sendButton.addEventListener('click', sendMessage);
 connectButton.addEventListener('click', connect );
 messageInput.addEventListener('keyup', handleEnter);
 function handleEnter(event) { if (event.keyCode === 13) { sendMessage();} }
-
+function refreshPage() { location.reload(); }

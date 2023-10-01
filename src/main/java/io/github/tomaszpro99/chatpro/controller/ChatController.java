@@ -28,6 +28,8 @@ public class ChatController {
     @SendTo("/topic/room/{id}")
     public MessageModel sendMessage(@Payload MessageModel chatMessage, SimpMessageHeaderAccessor headerAccessor) {
         String session = headerAccessor.getSessionId();
+        String asd = headerAccessor.getSubscriptionId();
+        logger.info(session + asd);
         return chatMessage;
     }
     @Transactional
